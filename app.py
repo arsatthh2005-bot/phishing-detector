@@ -56,4 +56,4 @@ def stats():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)s
+    app.run(debug=True)
