@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Phishing Detector</title>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            
+            /* Status Colors */
+            --critical-color: #ef4444; /* Red */
+            --high-color: #f97316; /* Orange */
+            --medium-color: #f59e0b; /* Amber */
+            --low-color: #10b981; /* Green */
+            --safe-color: #3b82f6; /* Blue */
+            
+            --accent: #8b5cf6;
+            --accent-hover: #7c3aed;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.1) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 850px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            margin: 0 0 0.5rem 0;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 1.2rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1.1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 0 4px rgba(139, 92, 246, 0.2);
+        }
+
+        button {
+            padding: 1.2rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* Loading Animation */
+        .loader-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2rem;
+            gap: 10px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Results Area */
+        .results-container {
+            display: none;
+            margin-top: 2.5rem;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .verdict-banner {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            gap: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Banner Themes */
+        .verdict-banner.CRITICAL {
+            background: linear-gradient(to right, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .verdict-banner.HIGH {
+            background: linear-gradient(to right, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05));
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+        .verdict-banner.MEDIUM {
+            background: linear-gradient(to right, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .verdict-banner.LOW {
+            background: linear-gradient(to right, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .verdict-banner.SAFE {
+            background: linear-gradient(to right, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .verdict-icon {
+            font-size: 3.5rem;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.3));
+        }
+
+        .verdict-text {
+            flex-grow: 1;
+        }
+
+        .verdict-text h2 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .CRITICAL .verdict-text h2 { color: var(--critical-color); }
+        .HIGH .verdict-text h2 { color: var(--high-color); }
+        .MEDIUM .verdict-text h2 { color: var(--medium-color); }
+        .LOW .verdict-text h2 { color: var(--low-color); }
+        .SAFE .verdict-text h2 { color: var(--safe-color); }
+
+        .verdict-text p {
+            margin: 0.5rem 0 0 0;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .score-circle {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            background: rgba(0,0,0,0.3);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        .reasons-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .reasons-box h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reasons-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .reasons-list li {
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            font-size: 1.05rem;
+            line-height: 1.5;
+            transition: transform 0.2s;
+        }
+
+        .reasons-list li:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Error Message */
+        .error-message {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--critical-color);
+            color: #fca5a5;
+            border-radius: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Shield AI</h1>
+            <p>Advanced Deep Learning Phishing & Malware Link Detector</p>
+        </div>
+
+        <div class="input-section">
+            <textarea id="inputText" placeholder="Paste a URL or an email/chat message here to analyze its safety..."></textarea>
+            <button id="scanBtn" onclick="analyzeText()">Analyze for Threats</button>
+        </div>
+
+        <div class="error-message" id="errorMsg"></div>
+
+        <div class="loader-container" id="loader">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <div class="results-container" id="results">
+            <div class="verdict-banner" id="verdictBanner">
+                <div class="verdict-icon" id="verdictIcon">🚨</div>
+                <div class="verdict-text">
+                    <h2 id="riskLevel">CRITICAL</h2>
+                    <p id="labelSubtext">Label: PHISHING | Confidence: 99.9%</p>
+                </div>
+                <div class="score-circle">
+                    <span id="riskScore">99</span>
+                </div>
+            </div>
+
+            <div class="reasons-box">
+                <h3>🔍 Analysis Breakdown</h3>
+                <ul class="reasons-list" id="reasonsList">
+                    <!-- Reasons populated by JS -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Icons mapping based on the Python backend's logic
+        const ICONS = {
+            "CRITICAL": "🚨",
+            "HIGH": "🔴",
+            "MEDIUM": "🟠",
+            "LOW": "🟡",
+            "SAFE": "✅"
+        };
+
+        // Pointing to your /check endpoint
+        const API_URL = 'http://127.0.0.1:5000/check'; 
+
+        async function analyzeText() {
+            const input = document.getElementById('inputText').value.trim();
+            if (!input) return;
+
+            // UI Resets
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('scanBtn').style.display = 'none';
+            document.getElementById('loader').style.display = 'flex';
+
+            try {
+                // Determine if input looks like an email or url (simple check)
+                const isEmail = input.includes('@') && !input.startsWith('http');
+                const payload = isEmail ? { email: input } : { url: input };
+
+                // Send POST request to your Python backend
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('errorMsg').innerText = "Unable to reach the server. Make sure your Python backend is running!";
+                document.getElementById('errorMsg').style.display = 'block';
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('scanBtn').style.display = 'block';
+            }
+        }
+
+        function displayResults(data) {
+            const banner = document.getElementById('verdictBanner');
+            
+            // Adapt your backend response: { label: "Malicious"|"Suspicious"|"Safe", confidence: float, reason: string }
+            let risk_level = "SAFE";
+            if (data.label === "Malicious") risk_level = "CRITICAL";
+            else if (data.label === "Suspicious") risk_level = "MEDIUM";
+            else risk_level = "SAFE";
+
+            // Clean previous classes
+            banner.className = 'verdict-banner ' + risk_level;
+            
+            document.getElementById('verdictIcon').innerText = ICONS[risk_level] || "❓";
+            document.getElementById('riskLevel').innerText = risk_level;
+            
+            // Handle confidence (0-1 vs 0-100)
+            let confVal = parseFloat(data.confidence) || 0;
+            let confPercent = confVal <= 1.0 ? (confVal * 100).toFixed(1) : confVal.toFixed(1);
+            
+            document.getElementById('labelSubtext').innerText = `Verdict: ${data.label} | Confidence: ${confPercent}%`;
+            
+            document.getElementById('riskScore').innerText = Math.round(confPercent);
+
+            // Populate reasons
+            const list = document.getElementById('reasonsList');
+            list.innerHTML = '';
+            
+            // Your backend returns a comma separated string for reason
+            let reasonsArray = [];
+            if (data.reason && data.reason.trim() !== "") {
+                reasonsArray = data.reason.split(", ");
+            }
+            
+            if (reasonsArray.length > 0) {
+                reasonsArray.forEach(reason => {
+                    const li = document.createElement('li');
+                    li.innerText = reason;
+                    
+                    // Generic border colors based on overall risk
+                    if (risk_level === 'CRITICAL') li.style.borderLeftColor = 'var(--critical-color)';
+                    else if (risk_level === 'MEDIUM') li.style.borderLeftColor = 'var(--medium-color)';
+                    else li.style.borderLeftColor = 'var(--safe-color)';
+
+                    list.appendChild(li);
+                });
+            } else {
+                list.innerHTML = '<li>✅ No specific threats detected.</li>';
+            }
+
+            document.getElementById('results').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+
